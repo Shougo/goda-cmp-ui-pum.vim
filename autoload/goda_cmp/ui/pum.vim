@@ -23,7 +23,14 @@ endfunction
 
 function! s:on_select(item) abort
   let ref = type(a:item) == v:t_dict ? get(a:item, 'user_data', '') : ''
-  let s:selected_ref = type(ref) == v:t_string ? ref : ''
+  let ref = type(ref) == v:t_string ? ref : ''
+  " pum#update_current_item() (goda_cmp#ui#pum#update_info()) fires
+  " PumCompleteChanged too: the item has not changed, and selecting it again
+  " would resolve it and update its info again, without end.
+  if ref !=# '' && ref ==# s:selected_ref
+    return
+  endif
+  let s:selected_ref = ref
   call goda_cmp#_select(a:item)
 endfunction
 
@@ -32,6 +39,8 @@ function! goda_cmp#ui#pum#show(r) abort
   if !goda_cmp#_fresh(a:r)
     return 0
   endif
+  " A list shown again (goda_cmp#map#complete()) has the same references.
+  let s:selected_ref = ''
   " pum.vim inserts the item in a terminal itself.
   let mode = a:r.mode ==# 't' ? 't' : mode()
   call pum#open(a:r.col, a:r.items, mode, get(a:r, 'insert', v:false))
@@ -47,6 +56,7 @@ function! goda_cmp#ui#pum#visible() abort
 endfunction
 
 function! goda_cmp#ui#pum#hide() abort
+  let s:selected_ref = ''
   if exists('*pum#visible') && pum#visible()
     call pum#close()
   endif
